@@ -16,11 +16,8 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        // Use email as stable, deterministic user ID (same email = same ID always)
-        if (user.email) {
-          token.id = user.email;
-          token.email = user.email;
-        }
+        token.id = token.id || uuidv4();
+        token.email = user.email;
         token.image = user.image;
       }
       return token;
@@ -37,8 +34,23 @@ export const authOptions: NextAuthOptions = {
           return true;
         }
 
-        if (supabase && user.email) {
-          // Use email as stable user ID (same email always maps to same user_settings row)
+        if (supabase) {
+          const { data: existingUser, error } = await supabase
+            .from('users')
+            .select()
+            .eq('email', user.email)
+            .single();
+
+          if (error) {
+            console.error('Supabase query error:', error);
+          } else if (!existingUser) {
+            await supabase.from('users').insert({
+              email: user.email,
+              name: user.name,
+              avatar_url: user.image,
+            });
+          }
+
           await supabase.from('user_settings').upsert({
             user_id: user.email,
             llm_base_url: '',
