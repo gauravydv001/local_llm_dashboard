@@ -36,21 +36,23 @@ export const authOptions: NextAuthOptions = {
         }
 
         if (supabase) {
-          const { data: existingUser, error } = await supabase
-            .from('users')
-            .select()
-            .eq('email', user.email)
-            .single();
+         //   const { data: existingUser, error } = await supabase
+        //     .from('users')
+        //     .select()
+        //     .eq('email', user.email)
+        //     .single();
 
-          if (error) {
-            console.error('Supabase query error:', error);
-          } else if (!existingUser) {
-            await supabase.from('users').insert({
-              email: user.email,
-              name: user.name,
-              avatar_url: user.image,
-            });
-          }
+        //   if (error) {
+        //     console.error('Supabase query error:', error);
+        //   } else if (!existingUser) {
+        //     await supabase.from('users').insert({
+        //       email: user.email,
+        //       name: user.name,
+        //       avatar_url: user.image,
+        //     });
+        //   }
+        // user table is currently unused, but we want to ensure the user exists in the database for settings persistence
+
 
           await supabase.from('user_settings').upsert({
             user_id: user.id || user.email,
