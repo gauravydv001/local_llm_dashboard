@@ -2,7 +2,6 @@ import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import { supabase } from './supabase';
 
-import { v4 as uuidv4 } from 'uuid';
 export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
@@ -17,15 +16,18 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = token.id || uuidv4();
-        token.email = user.email;
+        // Use email as stable, deterministic user ID (same email = same ID always)
+        if (user.email) {
+          token.id = user.email;
+          token.email = user.email;
+        }
         token.image = user.image;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id as string;
+        (session.user as any).id = token.id as string | undefined;  
       }
       return session;
     },
@@ -35,25 +37,10 @@ export const authOptions: NextAuthOptions = {
           return true;
         }
 
-        if (supabase) {
-          const { data: existingUser, error } = await supabase
-            .from('users')
-            .select()
-            .eq('email', user.email)
-            .single();
-
-          if (error) {
-            console.error('Supabase query error:', error);
-          } else if (!existingUser) {
-            await supabase.from('users').insert({
-              email: user.email,
-              name: user.name,
-              avatar_url: user.image,
-            });
-          }
-
+        if (supabase && user.email) {
+          // Use email as stable user ID (same email always maps to same user_settings row)
           await supabase.from('user_settings').upsert({
-            user_id: user.id || user.email,
+            user_id: user.email,
             llm_base_url: '',
             llm_api_key: '',
             updated_at: new Date().toISOString(),

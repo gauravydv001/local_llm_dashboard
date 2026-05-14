@@ -155,6 +155,23 @@ export default function Home() {
       return;
     }
 
+    // Validate LM Studio connection before sending
+    setLlmLoading(true);
+    try {
+      // Quick connectivity check by getting models
+      const testModels = await llmService.getModels(llmConfig);
+      if (!testModels || testModels.length === 0) {
+        throw new Error('LM Studio is not responding or has no models available.');
+      }
+    } catch (error) {
+      setLlmLoading(false);
+      await addMessage(
+        `❌ LM Studio connection failed: ${error instanceof Error ? error.message : 'Cannot connect to LM Studio at ' + llmConfig.baseUrl + '. Make sure LM Studio is running and the URL is correct.'}`,
+        'assistant'
+      );
+      return;
+    }
+
     // Add user message
     await addMessage(content, 'user', attachments);
 
