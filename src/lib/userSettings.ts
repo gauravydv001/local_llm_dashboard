@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { Settings, UserSettings } from '@/types';
+import { localStore } from './localStore';
 
 const STORAGE_PREFIX = 'user_llm_settings_';
 
@@ -19,6 +20,16 @@ export function cacheSettings(userId: string, settings: Settings) {
 }
 
 export async function fetchUserSettings(userId: string): Promise<Settings | null> {
+  // Prefer local disk store when available (Electron)
+  if (localStore.isAvailable()) {
+    const data = (await localStore.readJson(`users/${userId}/settings.json`)) as any;
+    if (!data) return null;
+    return {
+      llmBaseUrl: data.llmBaseUrl || '',
+      llmApiKey: data.llmApiKey || '',
+    };
+  }
+
   if (!supabase) return null;
 
   const { data, error } = await supabase
@@ -43,6 +54,19 @@ export async function fetchUserSettings(userId: string): Promise<Settings | null
 }
 
 export async function saveUserSettings(userId: string, settings: Settings): Promise<UserSettings | null> {
+  // Prefer local disk store when available
+  if (localStore.isAvailable()) {
+    const payload = {
+      userId,
+      llmBaseUrl: settings.llmBaseUrl,
+      llmApiKey: settings.llmApiKey,
+      updatedAt: new Date().toISOString(),
+    };
+    await localStore.ensureDir(`users/${userId}`);
+    await localStore.writeJson(`users/${userId}/settings.json`, payload);
+    return payload as UserSettings;
+  }
+
   if (!supabase) return null;
 
   const payload = {

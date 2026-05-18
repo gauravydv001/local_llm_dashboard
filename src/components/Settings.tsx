@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { Settings as SettingsIcon, ArrowLeft } from 'lucide-react';
 import { fetchUserSettings, getCachedSettings, cacheSettings, saveUserSettings } from '@/lib/userSettings';
 
+const LOCAL_USER_ID = 'local-machine-user';
+
 export function Settings() {
-  const { data: session } = useSession();
   const [llmBaseUrl, setLlmBaseUrl] = useState('');
   const [llmApiKey, setLlmApiKey] = useState('');
   const [saved, setSaved] = useState(false);
@@ -15,8 +15,7 @@ export function Settings() {
   const [loadingSettings, setLoadingSettings] = useState(false);
 
   useEffect(() => {
-    const userId = session?.user?.id;
-    if (!userId) return;
+    const userId = LOCAL_USER_ID;
 
     setLoadingSettings(true);
 
@@ -36,14 +35,10 @@ export function Settings() {
       }
       setLoadingSettings(false);
     })();
-  }, [session?.user?.id]);
+  }, []);
 
   const handleSave = async () => {
-    const userId = session?.user?.id;
-    if (!userId) {
-      setError('You must be signed in to save settings');
-      return;
-    }
+    const userId = LOCAL_USER_ID;
 
     if (!llmBaseUrl.trim()) {
       setError('LLM Base URL is required');
@@ -126,7 +121,7 @@ export function Settings() {
                 className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
               />
               <p className="text-xs text-gray-400 mt-1">
-                URL where this user's LM Studio is running (e.g., http://127.0.0.1:1234)
+                URL where your network LM is running (e.g., http://192.168.1.10:1234)
               </p>
             </div>
 

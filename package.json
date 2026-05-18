@@ -1,12 +1,17 @@
 {
   "name": "local-llm-chat",
   "version": "0.1.0",
+  "description": "Local network LLM chat desktop app with JSON storage",
+  "author": "local-llm-chat",
+  "main": "electron/main.js",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "desktop:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && cross-env ELECTRON_START_URL=http://localhost:3000 electron electron/main.js\"",
+    "desktop:pack:win": "npm run build && electron-builder --win msi"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.15.0",
@@ -15,11 +20,15 @@
     "js-cookie": "^3.0.5",
     "lucide-react": "^1.14.0",
     "next": "16.2.6",
-    "next-auth": "^4.24.14",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "electron": "^26.0.0",
+    "electron-builder": "^24.0.0",
+    "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
+    "wait-on": "^8.0.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -29,5 +38,22 @@
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "build": {
+    "appId": "com.local.llmchat",
+    "files": [
+      ".next/**/*",
+      "public/**/*",
+      "electron/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": ["msi"]
+    },
+    "msi": {
+      "perMachine": true
+    }
   }
 }

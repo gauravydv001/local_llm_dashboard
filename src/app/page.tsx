@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useSession, signIn, signOut } from 'next-auth/react';
 import { Sidebar } from '@/components/Sidebar';
 import { ChatWindow } from '@/components/ChatWindow';
 import { ChatInput } from '@/components/ChatInput';
@@ -9,14 +8,14 @@ import { useChatContext } from '@/contexts/ChatContext';
 import { llmService } from '@/lib/llmService';
 import { speakText } from '@/lib/tts';
 import { ChatAttachment, LLMConfig } from '@/types';
-import { LogOut, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { fetchUserSettings, getCachedSettings, cacheSettings } from '@/lib/userSettings';
 import { saveUserSettings } from '@/lib/userSettings';
 
 type ModelOption = { id: string; name?: string };
+const LOCAL_USER_ID = 'local-machine-user';
 
 export default function Home() {
-  const { data: session } = useSession();
   const {
     currentChat,
     messages,
@@ -53,14 +52,11 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (session?.user?.id) {
-      loadUserChats(session.user.id);
-    }
-  }, [session, loadUserChats]);
+    loadUserChats(LOCAL_USER_ID);
+  }, [loadUserChats]);
 
   useEffect(() => {
-    const userId = session?.user?.id;
-    if (!userId) return;
+    const userId = LOCAL_USER_ID;
 
     setConfigLoading(true);
 
@@ -80,11 +76,11 @@ export default function Home() {
       }
       setConfigLoading(false);
     })();
-  }, [session?.user?.id]);
+  }, []);
 
   useEffect(() => {
-    const userId = session?.user?.id;
-    if (!userId || !llmConfig?.baseUrl) return;
+    const userId = LOCAL_USER_ID;
+    if (!llmConfig?.baseUrl) return;
 
     const selectedModelKey = `selected_llm_model_${userId}`;
     const cachedModel = localStorage.getItem(selectedModelKey);
@@ -112,13 +108,11 @@ export default function Home() {
     };
 
     loadModels();
-  }, [session?.user?.id, llmConfig?.baseUrl, llmConfig?.apiKey]);
+  }, [llmConfig?.baseUrl, llmConfig?.apiKey]);
 
   const handleNewChat = () => {
     const title = `Chat ${new Date().toLocaleString()}`;
-    if (session?.user?.id) {
-      createNewChat(title, session.user.id);
-    }
+    createNewChat(title, LOCAL_USER_ID);
   };
 
   const buildPrompt = (content: string, attachments: ChatAttachment[]) => {
@@ -143,7 +137,7 @@ export default function Home() {
   };
 
   const handleSendMessage = async (content: string, attachments: ChatAttachment[] = []) => {
-    if (!currentChat || !session?.user?.id) return;
+    if (!currentChat) return;
 
     const prompt = buildPrompt(content, attachments);
 
@@ -204,8 +198,7 @@ export default function Home() {
   };
 
   const handleSaveQuickConfig = async () => {
-    const userId = session?.user?.id;
-    if (!userId) return;
+    const userId = LOCAL_USER_ID;
 
     if (!draftBaseUrl.trim()) {
       setConfigError('LM Studio URL is required');
@@ -217,7 +210,7 @@ export default function Home() {
     const saved = await saveUserSettings(userId, { llmBaseUrl: nextConfig.baseUrl, llmApiKey: nextConfig.apiKey || '' });
 
     if (!saved) {
-      setConfigError('Could not save settings to the database');
+      setConfigError('Could not save settings to local storage');
       return;
     }
 
@@ -228,7 +221,7 @@ export default function Home() {
 
   const handleModelChange = (modelId: string) => {
     setSelectedModel(modelId);
-    const userId = session?.user?.id;
+    const userId = LOCAL_USER_ID;
     if (userId) {
       localStorage.setItem(`selected_llm_model_${userId}`, modelId);
     }
@@ -248,23 +241,6 @@ export default function Home() {
     }
   };
 
-  if (!session) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-gray-800 to-gray-900">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-white mb-4">Local LLM Chat</h1>
-          <p className="text-gray-300 mb-8">Sign in with Google to get started</p>
-          <button
-            onClick={() => signIn('google')}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
-          >
-            Sign in with Google
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-screen bg-gray-900">
       <Sidebar onNewChat={handleNewChat} />
@@ -276,7 +252,7 @@ export default function Home() {
             <h1 className="text-xl font-semibold text-white">
               {currentChat?.title || 'Start a new chat'}
             </h1>
-            <p className="text-sm text-gray-400">{session.user?.email}</p>
+            <p className="text-sm text-gray-400">Local machine mode</p>
           </div>
           <div className="flex items-center gap-3">
             {configLoading ? (
@@ -306,13 +282,6 @@ export default function Home() {
               <div className="text-sm text-green-300">Up to date</div>
             )}
 
-            <button
-              onClick={() => signOut()}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-            >
-              <LogOut size={18} />
-              Sign Out
-            </button>
           </div>
         </div>
 
